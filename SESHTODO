@@ -1,0 +1,7 @@
+#Add names for Sessions
+#Add Actual Flags
+#Better Error handeling and security checks
+#Add more options for commands i.e. 
+#  current dir, other dirs, current sesh, other seshs
+#Add multiple sesh at once
+#Expand sesh past alias to other conveniences
