@@ -1,7 +1,6 @@
 # Sesh
-Create and switch between shortcut files to improve your workflow
+Create and switch between bash shortcut profiles
 
 # How to setup
-download sh script
-source the filepath in your .bash_profile or .bashrc
-
+Download the sh script
+Add "source path_to_sh_script" $ "sesh ref" in your .bash_profile or .bashrc

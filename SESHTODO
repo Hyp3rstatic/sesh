@@ -5,3 +5,7 @@
 #  current dir, other dirs, current sesh, other seshs
 #Add multiple sesh at once
 #Expand sesh past alias to other conveniences
+
+#BUGS:
+  #session ID's readded when new is called to the same file
+  #have a 0 file for null stuff
