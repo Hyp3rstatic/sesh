@@ -58,7 +58,7 @@ function sesh {
     
   #set the session file in use to the specified id
   #***add name support later
-  elif [[ $1 = 'set' ]]; then
+  elif [[ $1 = 'seti' ]]; then
     #DELETE OLD ALIASES
     sesh 'unal'
 
@@ -68,6 +68,11 @@ function sesh {
     export CURRENTPROJECTSESSIONID=$2
     echo "${CURRENTPROJECTSESSIONID}" >> $PROJECTSESSIONS/current
     sesh 'ref'
+
+  elif [[ $1 = 'set' ]]; then
+    id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
+    echo $id
+    sesh seti $id
   
   elif [[ $1 = 'ref' ]]; then
     #id=$(grep "SESSION_ID:" $PROJECTSESSIONS/$CURRENTPROJECTSESSIONID | tail -n 1)
@@ -90,7 +95,8 @@ function sesh {
     sesh 'unset'    
 
   #nickname a session file
-  
+  elif [[ $1 = 'nick' ]]; then
+    sed 's/'$CURRENTPROJECTSESSIONID':/'$CURRENTPROJECTSESSIONID':'$2'|''/' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
 
   #create a new session file
   elif [[ $1 = 'new' ]]; then
@@ -122,3 +128,7 @@ function sesh {
   
   fi
 }
+
+#To enable aliases when opening terminal
+sesh 'ref'
+
