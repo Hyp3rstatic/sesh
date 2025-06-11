@@ -1,16 +1,16 @@
 #!/bin/bash
 
-export PROJECTSESSIONS=$HOME'/.projectsessions'
+export PROJECTSESSIONS=$HOME'/.projectsessions' #set dotfolder env var
 
-if [[ -f $PROJECTSESSIONS'/current' ]]; then
-  export CURRENTPROJECTSESSIONID=$(cat $PROJECTSESSIONS/current)
+if [[ -f $PROJECTSESSIONS'/current' ]]; then #check if current file exists
+  export CURRENTPROJECTSESSIONID=$(cat $PROJECTSESSIONS/current) #set current id to stored value in current file
 else
-  export CURRENTPROJECTSESSIONID=0
+  export CURRENTPROJECTSESSIONID=0 #if no current file exists set current id to 0
 fi
 
 function sesh {
   
-  #makes sure .projectsessions directory and associated files is created
+  #ensure .projectsessions directory and associated files is created
   if [[ ! -d $PROJECTSESSIONS ]]; then
     mkdir $PROJECTSESSIONS
     export CURRENTPROJECTSESSIONID=0
@@ -20,7 +20,7 @@ function sesh {
   fi
   
   #ensure idlist file exists
-   if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
+  if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
     touch $PROJECTSESSIONS/idlist
   fi
   
@@ -30,78 +30,101 @@ function sesh {
   fi
 
   #view the sesh directory
-  if [[ $1 = 'ls' ]]; then
+  if [[ $1 = 'list' ]]; then
     ls $PROJECTSESSIONS
 
-  #get the id of the session file in use
+  #get the ids of the session files in use
   elif [[ $1 = 'current' ]]; then
     cat $PROJECTSESSIONS/current
 
-  #print all the ids in use
+  #print all the ids in use and their nicks
   elif [[ $1 = 'ids' ]]; then
     cat $PROJECTSESSIONS/idlist
 
   #unalias all the shortcuts in the current session file
   elif [[ $1 = 'unal' ]]; then
-    if [[ $CURRENTPROJECTSESSIONID -ne 0 ]]; then
-      while IFS= read -r line; do
-      unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
-      done < <(grep "alias" $PROJECTSESSIONS/$CURRENTPROJECTSESSIONID)
-    fi
-  
+    while IFS= read -r line; do
+    unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
+    done < <(grep "alias" $PROJECTSESSIONS/$2)
+
+  #stop using shortcut profile of specified id 
+  elif [[ $1 = 'reli' ]]; then
+    sesh 'unal' $2
+    id_line=$(grep -n $2 $PROJECTSESSIONS/current | cut -d : -f 1)
+    sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/current && mv $PROJECTSESSIONS/current $PROJECTSESSIONS/current
+
+  elif [[ $1 = 'rel' ]]; then
+    id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
+    sesh 'reli' $id
+
   #set sesh to have no current session file and unalias all shortcuts
   elif [[ $1 = 'unset' ]]; then
-    sesh 'unal'
+    for line in $(cat $PROJECTSESSIONS/current); do
+      sesh 'unal' echo $line | tr -d '[:space:]'
+    done
     rm $PROJECTSESSIONS/current
     touch $PROJECTSESSIONS/current
     echo "0" >> $PROJECTSESSIONS/current
     
   #set the session file in use to the specified id
-  #***add name support later
-  elif [[ $1 = 'seti' ]]; then
-    #DELETE OLD ALIASES
-    sesh 'unal'
+  #unset all other files
+  elif [[ $1 = 'setix' ]]; then
+    #delete old aliases
+    sesh 'unset'
 
-    #UPDATE CURRENT
+    #update current
     rm $PROJECTSESSIONS/current
     touch $PROJECTSESSIONS/current
     export CURRENTPROJECTSESSIONID=$2
     echo "${CURRENTPROJECTSESSIONID}" >> $PROJECTSESSIONS/current
     sesh 'ref'
 
+  #use shortcut profile of specific id
+  elif [[ $1 = seti ]]; then
+    echo $2 >> $PROJECTSESSIONS/current
+    sesh 'ref'
+
+  #use shortcut profile of specified nick
   elif [[ $1 = 'set' ]]; then
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
     echo $id
-    sesh seti $id
-  
+    sesh 'seti' $id
+ 
+  #source the aliases in use - making them usable 
   elif [[ $1 = 'ref' ]]; then
-    #id=$(grep "SESSION_ID:" $PROJECTSESSIONS/$CURRENTPROJECTSESSIONID | tail -n 1)
-    #id=$(echo $id | awk '{print $NF}')
-    source $PROJECTSESSIONS/$CURRENTPROJECTSESSIONID
-
+    for line in $(cat $PROJECTSESSIONS/current); do
+      source $PROJECTSESSIONS/$(echo $line | tr -d '[:space:]')
+    done
+  
   #add a cd to the current dir with an alias of $2 in the set session file
+  #TODO: update make use of nick
   elif [[ $1 = 'add' ]]; then
-    echo "alias ${2}='cd ${PWD}'" >> $PROJECTSESSIONS/$CURRENTPROJECTSESSIONID
+    echo "alias ${2}='cd ${PWD}'" >> $PROJECTSESSIONS/$3
     sesh 'ref'
 
-  #delete session file
+  #delete specified session file
+  #TODO: delete from current file as well
   elif [[ $1 = 'del' ]]; then
-    echo "deleting session file at ${PROJECTSESSIONS}/${CURRENTPROJECTSESSIONID}"
-    sesh 'unal'
-    rm $PROJECTSESSIONS/$CURRENTPROJECTSESSIONID
-    id_line=$(grep -n $CURRENTPROJECTSESSIONID $PROJECTSESSIONS/idlist | cut -d : -f 1)
+    echo "deleting session file at ${PROJECTSESSIONS}/${2}"
+    sesh 'unal' $2
+    rm $PROJECTSESSIONS/$2
+    id_line=$(grep -n $2 $PROJECTSESSIONS/idlist | cut -d : -f 1)
     echo $id_line
     sed $id_line'd' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
-    sesh 'unset'    
+    #if [ ! -s "$PROJECTSESSIONS/current" ]; then  
+    #  sesh 'unset'
+    #fi
 
   #nickname a session file
   elif [[ $1 = 'nick' ]]; then
-    sed 's/'$CURRENTPROJECTSESSIONID':/'$CURRENTPROJECTSESSIONID':'$2'|''/' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
+    sed 's/'$3':/'$3':'$2'|''/' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
 
   #create a new session file
   elif [[ $1 = 'new' ]]; then
+
     #create random id between 1000 and 9999
     session_id=$((RANDOM % 9000 + 1000))
+
     #check that id is not in use
     #if the random id is in use, look for an unused id starting from 1000
     if grep -q $session_id':' $PROJECTSESSIONS/idlist; then
@@ -115,6 +138,7 @@ function sesh {
         break
       fi
     done
+
     if [[ $session_id -ne 10000 ]]; then #only create new session file if id does not exceed max
       touch $PROJECTSESSIONS/$session_id
       echo -e "created new session file at ${PROJECTSESSIONS}/${session_id}\nSESSION ID: ${session_id}"
@@ -129,6 +153,6 @@ function sesh {
   fi
 }
 
-#To enable aliases when opening terminal
+#to enable aliases when opening terminal
 sesh 'ref'
 
