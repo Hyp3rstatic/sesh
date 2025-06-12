@@ -1,15 +1,14 @@
-#Add Actual Flags
-#WIP: Better Error handeling and security checks
-#Add more options for commands i.e. 
-  #current dir, other dirs, current sesh, other seshs
-#Expand sesh past alias to other conveniences
+Add Actual Flags
+WIP: Better Error handeling and security checks
+Add more options for commands i.e. 
+  current dir, other dirs, current sesh, other seshs
+Expand sesh past alias to other conveniences
 
-#Python Running specific scripts
+Python Running specific scripts
 
-#BUGS:
-  #session ID's readded when new is called to the same file
-  #have a 0 file for null stuff
-  #mutex???
-  #differences between terminals
+BUGS:
+  session ID's readded when new is called to the same file
+  have a 0 file for null stuff
+  differences between terminals
 
   IF SESH CURRENT FILE != CURRENT VARIABLE HANDLE PROBLEM
