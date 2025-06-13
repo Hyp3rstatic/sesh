@@ -20,7 +20,7 @@ function sesh {
     touch $PROJECTSESSIONS/idlist
   fi
   
-  #enusre current file exists
+  #ensure current file exists
   if [[ ! -f $PROJECTSESSIONS/current ]]; then
     touch $PROJECTSESSIONS/current
   fi
@@ -33,7 +33,7 @@ function sesh {
   elif [[ $1 = 'current' ]]; then
     cat $PROJECTSESSIONS/current
 
-  #print all the ids in use and their nicks
+  #print all profile ids and their nicks
   elif [[ $1 = 'ids' ]]; then
     cat $PROJECTSESSIONS/idlist
 
@@ -47,55 +47,48 @@ function sesh {
     unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
     done < <(grep "alias" $PROJECTSESSIONS/$2)
 
-  #stop using shortcut profile of specified id 
-  elif [[ $1 = 'rel' ]]; then
+  #stop using specified shortcut profile 
+  elif [[ $1 = 'unset' ]]; then
     sesh 'unal' $(sesh 'getid' $2)
     id_line=$(grep -n $(sesh 'getid' $2) $PROJECTSESSIONS/current | cut -d : -f 1)
     echo $id_line
     sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/tmp_current && mv $PROJECTSESSIONS/tmp_current $PROJECTSESSIONS/current
 
-  #get the id of a nick
+  #get the id associated with a nick
   elif [[ $1 = 'getid' ]]; then
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
     echo $id
 
   #set sesh to have no current session file and unalias all shortcuts
-  elif [[ $1 = 'unset' ]]; then
+  elif [[ $1 = 'blank' ]]; then
     for line in $(cat $PROJECTSESSIONS/current); do
       sesh 'unal' $(echo $line | tr -d '[:space:]')
     done
     rm $PROJECTSESSIONS/current
     touch $PROJECTSESSIONS/current
     
-  #set the session file in use to the specified id
-  #unset all other files
-  elif [[ $1 = 'setix' ]]; then
-    #delete old aliases
+  #unset all sesssion profiles except the one specified
+  elif [[ $1 = 'setx' ]]; then
     sesh 'unset'
-
-    #update current
-    rm $PROJECTSESSIONS/current
-    touch $PROJECTSESSIONS/current
-    export CURRENTPROJECTSESSIONID=$2
-    echo "${CURRENTPROJECTSESSIONID}" >> $PROJECTSESSIONS/current
+    echo "$(sesh 'getid' $2)" >> $PROJECTSESSIONS/current
     sesh 'ref'
 
-  #use shortcut profile of specific id
+  #use a shortcut profile
   elif [[ $1 = set ]]; then
     echo $(sesh 'getid' $2) >> $PROJECTSESSIONS/current
     sesh 'ref'
  
-  #source the aliases in use - making them usable 
+  #source the aliases of profiles in current - making them usable 
   elif [[ $1 = 'ref' ]]; then
     for line in $(cat $PROJECTSESSIONS/current); do
       source $PROJECTSESSIONS/$(echo $line | tr -d '[:space:]')
       echo $line #DEBUG
     done
   
-  #add a cd to the current dir with an alias of $2 in the set session file
+  #add a cd alias to to current directory of the user in the specified shortcut profile
   #TODO: update make use of nick
   elif [[ $1 = 'add' ]]; then
-    echo "alias $(sesh 'getid' $2)='cd ${PWD}'" >> $PROJECTSESSIONS/$3
+    echo "alias ${2}='cd ${PWD}'" >> $PROJECTSESSIONS/$(sesh 'getid' $3)
     sesh 'ref'
   
   #delete specified session file
