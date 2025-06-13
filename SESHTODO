@@ -8,7 +8,4 @@ Python Running specific scripts
 
 BUGS:
   session ID's readded when new is called to the same file
-  have a 0 file for null stuff
   differences between terminals
-
-  IF SESH CURRENT FILE != CURRENT VARIABLE HANDLE PROBLEM

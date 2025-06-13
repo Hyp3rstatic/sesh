@@ -2,21 +2,17 @@
 
 export PROJECTSESSIONS=$HOME'/.projectsessions' #set dotfolder env var
 
-if [[ -f $PROJECTSESSIONS'/current' ]]; then #check if current file exists
-  export CURRENTPROJECTSESSIONID=$(cat $PROJECTSESSIONS/current) #set current id to stored value in current file
-else
-  export CURRENTPROJECTSESSIONID=0 #if no current file exists set current id to 0
-fi
+#source shortcut profiles in use
+for line in $(cat $PROJECTSESSIONS/current); do
+  source $PROJECTSESSIONS/$(echo "$line" | cut -d ':' -f 1)
+  echo $line #DEBUG
+done
 
 function sesh {
-  
-  #ensure .projectsessions directory and associated files is created
+
+  #ensure .projectsessions directory exists
   if [[ ! -d $PROJECTSESSIONS ]]; then
     mkdir $PROJECTSESSIONS
-    export CURRENTPROJECTSESSIONID=0
-    touch $PROJECTSESSIONS/current
-    echo "${CURRENTPROJECTSESSIONID}" >> $PROJECTSESSIONS/current
-    touch $PROJECTSESSIONS/idlist
   fi
   
   #ensure idlist file exists
@@ -41,30 +37,35 @@ function sesh {
   elif [[ $1 = 'ids' ]]; then
     cat $PROJECTSESSIONS/idlist
 
-  #unalias all the shortcuts in the current session file
+  #view the contents of the specified profile 
+  elif [[ $1 = 'view' ]]; then
+    cat $PROJECTSESSIONS/$(sesh 'getid' $2)
+  
+  #unalias all the shortcuts in specific profile
   elif [[ $1 = 'unal' ]]; then
     while IFS= read -r line; do
     unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
     done < <(grep "alias" $PROJECTSESSIONS/$2)
 
   #stop using shortcut profile of specified id 
-  elif [[ $1 = 'reli' ]]; then
-    sesh 'unal' $2
-    id_line=$(grep -n $2 $PROJECTSESSIONS/current | cut -d : -f 1)
-    sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/current && mv $PROJECTSESSIONS/current $PROJECTSESSIONS/current
-
   elif [[ $1 = 'rel' ]]; then
+    sesh 'unal' $(sesh 'getid' $2)
+    id_line=$(grep -n $(sesh 'getid' $2) $PROJECTSESSIONS/current | cut -d : -f 1)
+    echo $id_line
+    sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/tmp_current && mv $PROJECTSESSIONS/tmp_current $PROJECTSESSIONS/current
+
+  #get the id of a nick
+  elif [[ $1 = 'getid' ]]; then
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
-    sesh 'reli' $id
+    echo $id
 
   #set sesh to have no current session file and unalias all shortcuts
   elif [[ $1 = 'unset' ]]; then
     for line in $(cat $PROJECTSESSIONS/current); do
-      sesh 'unal' echo $line | tr -d '[:space:]'
+      sesh 'unal' $(echo $line | tr -d '[:space:]')
     done
     rm $PROJECTSESSIONS/current
     touch $PROJECTSESSIONS/current
-    echo "0" >> $PROJECTSESSIONS/current
     
   #set the session file in use to the specified id
   #unset all other files
@@ -80,40 +81,33 @@ function sesh {
     sesh 'ref'
 
   #use shortcut profile of specific id
-  elif [[ $1 = seti ]]; then
-    echo $2 >> $PROJECTSESSIONS/current
+  elif [[ $1 = set ]]; then
+    echo $(sesh 'getid' $2) >> $PROJECTSESSIONS/current
     sesh 'ref'
-
-  #use shortcut profile of specified nick
-  elif [[ $1 = 'set' ]]; then
-    id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
-    echo $id
-    sesh 'seti' $id
  
   #source the aliases in use - making them usable 
   elif [[ $1 = 'ref' ]]; then
     for line in $(cat $PROJECTSESSIONS/current); do
       source $PROJECTSESSIONS/$(echo $line | tr -d '[:space:]')
+      echo $line #DEBUG
     done
   
   #add a cd to the current dir with an alias of $2 in the set session file
   #TODO: update make use of nick
   elif [[ $1 = 'add' ]]; then
-    echo "alias ${2}='cd ${PWD}'" >> $PROJECTSESSIONS/$3
+    echo "alias $(sesh 'getid' $2)='cd ${PWD}'" >> $PROJECTSESSIONS/$3
     sesh 'ref'
-
+  
   #delete specified session file
   #TODO: delete from current file as well
   elif [[ $1 = 'del' ]]; then
-    echo "deleting session file at ${PROJECTSESSIONS}/${2}"
-    sesh 'unal' $2
-    rm $PROJECTSESSIONS/$2
-    id_line=$(grep -n $2 $PROJECTSESSIONS/idlist | cut -d : -f 1)
+    id=$(sesh 'getid' $2)
+    echo "deleting session file at ${PROJECTSESSIONS}/${id}"
+    sesh 'unal' $id
+    rm $PROJECTSESSIONS/$id
+    id_line=$(grep -n $id $PROJECTSESSIONS/idlist | cut -d : -f 1)
     echo $id_line
     sed $id_line'd' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
-    #if [ ! -s "$PROJECTSESSIONS/current" ]; then  
-    #  sesh 'unset'
-    #fi
 
   #nickname a session file
   elif [[ $1 = 'nick' ]]; then
@@ -145,10 +139,6 @@ function sesh {
       echo "#SESSION_ID: ${session_id}" >> $PROJECTSESSIONS/$session_id
       echo $session_id':' >> $PROJECTSESSIONS/idlist
     fi
-  
-  #view the contents of the session file in use
-  elif [[ $1 = 'view' && $CURRENTPROJECTSESSIONID -ne 0 ]]; then
-    cat $PROJECTSESSIONS/$CURRENTPROJECTSESSIONID
   
   fi
 }
