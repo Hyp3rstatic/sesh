@@ -3,10 +3,11 @@
 export PROJECTSESSIONS=$HOME'/.projectsessions' #set dotfolder env var
 
 #source shortcut profiles in use
-for line in $(cat $PROJECTSESSIONS/current); do
-  source $PROJECTSESSIONS/$(echo "$line" | cut -d ':' -f 1)
-  echo $line #DEBUG
-done
+if [[ -f $PROJECTSESSIONS/current ]]; then
+  for line in $(cat $PROJECTSESSIONS/current); do
+    source $PROJECTSESSIONS/$(echo "$line" | cut -d ':' -f 1)
+  done
+fi
 
 function sesh {
 
@@ -51,7 +52,6 @@ function sesh {
   elif [[ $1 = 'unset' ]]; then
     sesh 'unal' $(sesh 'getid' $2)
     id_line=$(grep -n $(sesh 'getid' $2) $PROJECTSESSIONS/current | cut -d : -f 1)
-    echo $id_line
     sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/tmp_current && mv $PROJECTSESSIONS/tmp_current $PROJECTSESSIONS/current
 
   #get the id associated with a nick
@@ -81,8 +81,7 @@ function sesh {
   #source the aliases of profiles in current - making them usable 
   elif [[ $1 = 'ref' ]]; then
     for line in $(cat $PROJECTSESSIONS/current); do
-      source $PROJECTSESSIONS/$(echo $line | tr -d '[:space:]')
-      echo $line #DEBUG
+      source $PROJECTSESSIONS/$(echo "$line" | cut -d ':' -f 1)
     done
   
   #add a cd alias to to current directory of the user in the specified shortcut profile
@@ -135,7 +134,4 @@ function sesh {
   
   fi
 }
-
-#to enable aliases when opening terminal
-sesh 'ref'
 
