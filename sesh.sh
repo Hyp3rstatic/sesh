@@ -39,23 +39,23 @@ function sesh {
     cat $PROJECTSESSIONS/idlist
 
   #view the contents of the specified profile 
-  elif [[ $1 = 'view' ]]; then
+  elif [[ $1 = 'view' && ! -z $2 ]]; then
     cat $PROJECTSESSIONS/$(sesh 'getid' $2)
   
   #unalias all the shortcuts in specific profile
-  elif [[ $1 = 'unal' ]]; then
+  elif [[ $1 = 'unal' && ! -z $2 ]]; then
     while IFS= read -r line; do
     unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
     done < <(grep "alias" $PROJECTSESSIONS/$2)
 
   #stop using specified shortcut profile 
-  elif [[ $1 = 'unset' ]]; then
+  elif [[ $1 = 'unset' && ! -z $2 ]]; then
     sesh 'unal' $(sesh 'getid' $2)
     id_line=$(grep -n $(sesh 'getid' $2) $PROJECTSESSIONS/current | cut -d : -f 1)
     sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/tmp_current && mv $PROJECTSESSIONS/tmp_current $PROJECTSESSIONS/current
 
   #get the id associated with a nick
-  elif [[ $1 = 'getid' ]]; then
+  elif [[ $1 = 'getid' && ! -z $2 ]]; then
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
     echo $id
 
@@ -68,13 +68,13 @@ function sesh {
     touch $PROJECTSESSIONS/current
     
   #unset all sesssion profiles except the one specified
-  elif [[ $1 = 'setx' ]]; then
+  elif [[ $1 = 'setx' && ! -z $2 ]]; then
     sesh 'unset'
     echo "$(sesh 'getid' $2)" >> $PROJECTSESSIONS/current
     sesh 'ref'
 
   #use a shortcut profile
-  elif [[ $1 = set ]]; then
+  elif [[ $1 = 'set' && ! -z $2 ]]; then
     echo $(sesh 'getid' $2) >> $PROJECTSESSIONS/current
     sesh 'ref'
  
@@ -86,13 +86,13 @@ function sesh {
   
   #add a cd alias to to current directory of the user in the specified shortcut profile
   #TODO: update make use of nick
-  elif [[ $1 = 'add' ]]; then
+  elif [[ $1 = 'add' && ! -z $3 ]]; then
     echo "alias ${2}='cd ${PWD}'" >> $PROJECTSESSIONS/$(sesh 'getid' $3)
     sesh 'ref'
   
   #delete specified session file
   #TODO: delete from current file as well
-  elif [[ $1 = 'del' ]]; then
+  elif [[ $1 = 'del' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     echo "deleting session file at ${PROJECTSESSIONS}/${id}"
     sesh 'unal' $id
@@ -102,7 +102,7 @@ function sesh {
     sed $id_line'd' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
 
   #nickname a session file
-  elif [[ $1 = 'nick' ]]; then
+  elif [[ $1 = 'nick' && ! -z $3 ]]; then
     sed 's/'$3':/'$3':'$2'|''/' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
 
   #create a new session file
