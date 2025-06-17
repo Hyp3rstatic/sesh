@@ -29,6 +29,10 @@ function sesh {
     echo "created file at $PROJECTSESSIONS/current"
   fi
 
+  # START ARGS
+
+  #TODO: ADD HELP
+
   #view the sesh directory
   if [[ $1 = 'list' ]]; then
     if [[ ! -d $PROJECTSESSIONS ]]; then
@@ -36,6 +40,14 @@ function sesh {
       return
     fi
     ls $PROJECTSESSIONS
+
+  #go to the shortcut directory
+  elif [[ $1 = 'go' ]]; then
+    if [[ ! -d $PROJECTSESSIONS ]]; then
+      echo "directory $PROJECTSESSIONS does not exist"
+      return
+    fi
+    cd $PROJECTSESSIONS
 
   #get the ids and nicks of the profiles in use
   elif [[ $1 = 'current' ]]; then
@@ -86,11 +98,11 @@ function sesh {
     id=$(sesh 'getid' $2)
     err=$?
     if [[ $err -eq 100 ]]; then
-      echo "getid failed: 100 - $PROJECTSESSIONS/idlist does not exist"
+      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
       return
     fi
     if [[ $err -eq 101 ]]; then
-      echo "getid failed: 101 - $id nick does not correspond to shortcut profile"
+      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
       return
     fi
     if [[ ! -f $PROJECTSESSIONS/$id ]]; then
@@ -101,13 +113,32 @@ function sesh {
   
   #unalias all the shortcuts in specific profile
   elif [[ $1 = 'unal' && ! -z $2 ]]; then
-    while IFS= read -r line; do
-      unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
+    while IFS= read -r line; do 
+      alias_name=$(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
+      if [[ $(alias | grep $alias_name'=') = '' ]]; then
+        echo "alias: $alias_name not in use"
+      else
+        unalias $alias_name
+      fi
     done < <(grep "alias" $PROJECTSESSIONS/$2)
 
   #stop using specified shortcut profile 
   elif [[ $1 = 'unset' && ! -z $2 ]]; then
-    sesh 'unal' $(sesh 'getid' $2)
+    id=$(sesh 'getid' $2)
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
+    if [[ $err -eq 101 ]]; then
+      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+      return
+    fi
+    if [[ $(grep $id $PROJECTSESSIONS/current) = '' ]]; then
+      echo "shortcut profile not in use"
+      return
+    fi
+    sesh 'unal' $id
     id_line=$(grep -n $(sesh 'getid' $2) $PROJECTSESSIONS/current | cut -d : -f 1)
     sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/tmp_current && mv $PROJECTSESSIONS/tmp_current $PROJECTSESSIONS/current
 
@@ -140,6 +171,20 @@ function sesh {
 
   #use a shortcut profile
   elif [[ $1 = 'set' && ! -z $2 ]]; then
+    id=$(sesh 'getid' $2)
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
+    if [[ $err -eq 101 ]]; then
+      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+      return
+    fi
+    if [[ $(grep $id $PROJECTSESSIONS/current) != '' ]]; then
+      echo "shortcut profile is already in use"
+      return
+    fi
     echo $(sesh 'getid' $2) >> $PROJECTSESSIONS/current
     sesh 'ref'
  
@@ -196,11 +241,11 @@ function sesh {
     id=$(sesh 'getid' $2)
     err=$?
     if [[ $err -eq 100 ]]; then
-      echo "getid failed: 100 - $PROJECTSESSIONS/idlist does not exist"
+      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
       return
     fi
     if [[ $err -eq 101 ]]; then
-      echo "getid failed: 101 - $id nick does not correspond to shortcut profile"
+      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
       return
     fi
     vim $PROJECTSESSIONS/$id
