@@ -14,49 +14,93 @@ function sesh {
   #ensure .projectsessions directory exists
   if [[ ! -d $PROJECTSESSIONS ]]; then
     mkdir $PROJECTSESSIONS
+    echo "created directory at $PROJECTSESSIONS"
   fi
   
   #ensure idlist file exists
   if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
     touch $PROJECTSESSIONS/idlist
+    echo "created file at $PROJECTSESSIONS/idlist"
   fi
   
   #ensure current file exists
   if [[ ! -f $PROJECTSESSIONS/current ]]; then
     touch $PROJECTSESSIONS/current
+    echo "created file at $PROJECTSESSIONS/current"
   fi
 
   #view the sesh directory
   if [[ $1 = 'list' ]]; then
+    if [[ ! -d $PROJECTSESSION ]]; then
+      echo "directory $PROJECTSESSIONS does not exist"
+      return
+    fi
     ls $PROJECTSESSIONS
 
   #get the ids and nicks of the profiles in use
   elif [[ $1 = 'current' ]]; then
+    if [[ ! -f $PROJECTSESSIONS/current ]]; then
+      echo "file $PROJECTSESSIONS/current does not exist"
+      return
+    fi 
+    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
+      echo "file $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
     for line in $(cat $PROJECTSESSIONS/current); do
       echo $(grep $line $PROJECTSESSIONS/idlist)
     done
-
+  
   #print all profile ids and their nicks
   elif [[ $1 = 'ids' ]]; then
+    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
+      echo "file $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
     cat $PROJECTSESSIONS/idlist
 
   #print the contents of all profiles in use
   elif [[ $1 = 'contents' ]]; then
-    echo "# # # # # # # # #"
+    if [[ ! -f $PROJECTSESSIONS/current ]]; then
+      echo "file $PROJECTSESSIONS/current does not exist"
+      return
+    fi
+    echo ' '
     for line in $(cat $PROJECTSESSIONS/current); do
-       cat $PROJECTSESSIONS/$(echo $line | awk -F':' '{print$1}')
-       echo ' '
+      id=$(echo $line | awk -F':' '{print$1}')
+      if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
+        echo "file $PROJECTSESSIONS/idlist does not exist"
+      else
+        grep $id $PROJECTSESSIONS/idlist
+      fi
+      if [[ ! -f $PROJECTSESSIONS/$id ]]; then
+        echo "file ${PROJECTSESSIONS}/${id} does not exist"
+      else
+        cat $PROJECTSESSIONS/$id
+      fi
+      echo ' '
     done
-    echo "# # # # # # # # #"
 
   #view the contents of the specified profile 
   elif [[ $1 = 'view' && ! -z $2 ]]; then
-    cat $PROJECTSESSIONS/$(sesh 'getid' $2)
+    id=$(sesh 'getid' $2)
+    if [[ $id -eq 400 ]]; then
+      echo "getid failed: 400 - $PROJECTSESSIONS/idlist does not exist"
+    fi
+    if [[ $id = '' ]]; then
+      echo "'${2}' does not correspond to any shortcut profile"
+      return
+    fi
+    if [[ ! -f $PROJECTSESSIONS/$id ]]; then
+      echo "file ${PROJECTSESSIONS}/${id} does not exist"
+      return
+    fi
+    cat $PROJECTSESSIONS/$id
   
   #unalias all the shortcuts in specific profile
   elif [[ $1 = 'unal' && ! -z $2 ]]; then
     while IFS= read -r line; do
-    unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
+      unalias $(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
     done < <(grep "alias" $PROJECTSESSIONS/$2)
 
   #stop using specified shortcut profile 
@@ -67,6 +111,10 @@ function sesh {
 
   #get the id associated with a nick
   elif [[ $1 = 'getid' && ! -z $2 ]]; then
+    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
+      echo "file $PROJECTSESSIONS/idlist does not exist"
+      return 400 #idlist does not exist
+    fi
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
     echo $id
 
@@ -144,7 +192,7 @@ function sesh {
       echo "id ${session_id} already exists"
       session_id=$((session_id+1))
       if [[ $session_id -eq 10000 ]]; then
-        echo 'maximum number of saved sessions exceeded, cannot create a new session until another is deleted'
+        echo "maximum number of saved sessions exceeded, cannot create a new session until another is deleted"
         break
       fi
     done
