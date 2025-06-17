@@ -96,21 +96,26 @@ function sesh {
     done
   
   #add a cd alias to to current directory of the user in the specified shortcut profile
-  #TODO: update make use of nick
   elif [[ $1 = 'add' && ! -z $3 ]]; then
     echo "alias ${2}='cd ${PWD}'" >> $PROJECTSESSIONS/$(sesh 'getid' $3)
     sesh 'ref'
   
-  #delete specified session file
-  #TODO: delete from current file as well
+  #delete specified session file from idlist and current (if applicable)
   elif [[ $1 = 'del' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     echo "deleting session file at ${PROJECTSESSIONS}/${id}"
     sesh 'unal' $id
     rm $PROJECTSESSIONS/$id
+    
+    #remove id from idlist
     id_line=$(grep -n $id $PROJECTSESSIONS/idlist | cut -d : -f 1)
-    echo $id_line
     sed $id_line'd' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
+    
+    #remove id from current if it exists
+    if  grep -q $id $PROJECTSESSIONS/current; then
+      id_line=$(grep -n $id $PROJECTSESSIONS/current | cut -d : -f 1)
+      sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/tmp_current && mv $PROJECTSESSIONS/tmp_current $PROJECTSESSIONS/current
+    fi
 
   #nickname a session file
   elif [[ $1 = 'nick' && ! -z $3 ]]; then
