@@ -30,13 +30,24 @@ function sesh {
   if [[ $1 = 'list' ]]; then
     ls $PROJECTSESSIONS
 
-  #get the ids of the session files in use
+  #get the ids and nicks of the profiles in use
   elif [[ $1 = 'current' ]]; then
-    cat $PROJECTSESSIONS/current
+    for line in $(cat $PROJECTSESSIONS/current); do
+      echo $(grep $line $PROJECTSESSIONS/idlist)
+    done
 
   #print all profile ids and their nicks
   elif [[ $1 = 'ids' ]]; then
     cat $PROJECTSESSIONS/idlist
+
+  #print the contents of all profiles in use
+  elif [[ $1 = 'contents' ]]; then
+    echo "# # # # # # # # #"
+    for line in $(cat $PROJECTSESSIONS/current); do
+       cat $PROJECTSESSIONS/$(echo $line | awk -F':' '{print$1}')
+       echo ' '
+    done
+    echo "# # # # # # # # #"
 
   #view the contents of the specified profile 
   elif [[ $1 = 'view' && ! -z $2 ]]; then
@@ -105,8 +116,16 @@ function sesh {
   elif [[ $1 = 'nick' && ! -z $3 ]]; then
     sed 's/'$3':/'$3':'$2'|''/' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
 
-  #create a new session file
-  elif [[ $1 = 'new' ]]; then
+  #modify idlist
+  elif [[ $1 = 'modlist' ]]; then
+    vim $PROJECTSESSIONS/idlist
+
+  #modify current
+  elif [[ $1 = 'modcurr' ]]; then
+    vim $PROJECTSESSIONS/current
+
+  #create a new session file with nick
+  elif [[ $1 = 'new' && ! -z $2 ]]; then
 
     #create random id between 1000 and 9999
     session_id=$((RANDOM % 9000 + 1000))
@@ -131,7 +150,8 @@ function sesh {
       echo "#SESSION_ID: ${session_id}" >> $PROJECTSESSIONS/$session_id
       echo $session_id':' >> $PROJECTSESSIONS/idlist
     fi
-  
+    sesh 'nick' $2 $session_id
+ 
   fi
 }
 
