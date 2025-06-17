@@ -31,7 +31,7 @@ function sesh {
 
   #view the sesh directory
   if [[ $1 = 'list' ]]; then
-    if [[ ! -d $PROJECTSESSION ]]; then
+    if [[ ! -d $PROJECTSESSIONS ]]; then
       echo "directory $PROJECTSESSIONS does not exist"
       return
     fi
@@ -84,11 +84,13 @@ function sesh {
   #view the contents of the specified profile 
   elif [[ $1 = 'view' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
-    if [[ $id -eq 400 ]]; then
-      echo "getid failed: 400 - $PROJECTSESSIONS/idlist does not exist"
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo "getid failed: 100 - $PROJECTSESSIONS/idlist does not exist"
+      return
     fi
-    if [[ $id = '' ]]; then
-      echo "'${2}' does not correspond to any shortcut profile"
+    if [[ $err -eq 101 ]]; then
+      echo "getid failed: 101 - $id nick does not correspond to shortcut profile"
       return
     fi
     if [[ ! -f $PROJECTSESSIONS/$id ]]; then
@@ -113,9 +115,13 @@ function sesh {
   elif [[ $1 = 'getid' && ! -z $2 ]]; then
     if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
       echo "file $PROJECTSESSIONS/idlist does not exist"
-      return 400 #idlist does not exist
+      return 100 #idlist does not exist
     fi
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
+    if [[ $id = '' ]]; then
+      echo "'${2}' does not correspond to any shortcut profile"
+      return 101
+    fi
     echo $id
 
   #set sesh to have no current session file and unalias all shortcuts
@@ -171,11 +177,33 @@ function sesh {
 
   #modify idlist
   elif [[ $1 = 'modlist' ]]; then
+    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
+      echo "file $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
     vim $PROJECTSESSIONS/idlist
 
   #modify current
   elif [[ $1 = 'modcurr' ]]; then
+    if [[ ! -f $PROJECTSESSIONS/current ]]; then
+      echo "file $PROJECTSESSIONS/current does not exist"
+      return
+    fi 
     vim $PROJECTSESSIONS/current
+
+  #modify specified profile
+  elif [[ $1 = 'mod' ]]; then
+    id=$(sesh 'getid' $2)
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo "getid failed: 100 - $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
+    if [[ $err -eq 101 ]]; then
+      echo "getid failed: 101 - $id nick does not correspond to shortcut profile"
+      return
+    fi
+    vim $PROJECTSESSIONS/$id
 
   #create a new session file with nick
   elif [[ $1 = 'new' && ! -z $2 ]]; then
