@@ -2,7 +2,7 @@
 
 export PROJECTSESSIONS=$HOME'/.projectsessions' #set dotfolder env var
 
-#source shortcut profiles in use
+#source profiles in use
 if [[ -f $PROJECTSESSIONS/current ]]; then
   for line in $(cat $PROJECTSESSIONS/current); do
     source $PROJECTSESSIONS/$(echo "$line" | cut -d ':' -f 1)
@@ -43,6 +43,7 @@ function sesh {
 
   # START ARGS
 
+  #show all args for sesh
   if [[ $1 = 'help' ]]; then
     echo "
       list      - ls sesh directory
@@ -70,7 +71,7 @@ function sesh {
   elif [[ $1 = 'list' ]]; then
     ls $PROJECTSESSIONS
 
-  #go to the shortcut directory
+  #go to the sesh directory
   elif [[ $1 = 'go' ]]; then
     cd $PROJECTSESSIONS
 
@@ -98,7 +99,7 @@ function sesh {
       echo ' '
     done
 
-  #view the contents of the specified profile 
+  #view the contents of a profile 
   elif [[ $1 = 'view' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
@@ -112,8 +113,12 @@ function sesh {
     fi
     cat $PROJECTSESSIONS/$id
   
-  #unalias all the shortcuts in specific profile
+  #unalias all the shortcuts in a profile
   elif [[ $1 = 'unal' && ! -z $2 ]]; then
+    if [[ ! -f $PROJECTSESSIONS/$2 ]]; then
+        echo "file ${PROJECTSESSIONS}/${2} does not exist"
+        return
+    fi
     while IFS= read -r line; do 
       alias_name=$(echo $line | awk -F'=' '{print$1}' | awk '{print $2}')
       if [[ $(alias | grep $alias_name'=') = '' ]]; then
@@ -123,7 +128,7 @@ function sesh {
       fi
     done < <(grep "alias" $PROJECTSESSIONS/$2)
 
-  #stop using specified shortcut profile 
+  #stop using a profile 
   elif [[ $1 = 'unset' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
@@ -132,7 +137,7 @@ function sesh {
       return
     fi
     if [[ $(grep $id $PROJECTSESSIONS/current) = '' ]]; then
-      echo "shortcut profile not in use"
+      echo "profile not in use"
       return
     fi
     sesh 'unal' $id
@@ -143,12 +148,12 @@ function sesh {
   elif [[ $1 = 'getid' && ! -z $2 ]]; then
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
     if [[ $id = '' ]]; then
-      echo "getid failed: 100 - nick does not correspond to a shortcut profile"
+      echo "getid failed: 100 - nick does not correspond to a profile"
       return 100
     fi
     echo $id
 
-  #set sesh to have no current session file and unalias all shortcuts
+  #set sesh to have no current profiles and unalias all shortcuts
   elif [[ $1 = 'blank' ]]; then
     for line in $(cat $PROJECTSESSIONS/current); do
       sesh 'unal' $(echo $line | tr -d '[:space:]')
@@ -156,7 +161,7 @@ function sesh {
     rm $PROJECTSESSIONS/current
     touch $PROJECTSESSIONS/current
 
-  #use a shortcut profile
+  #use a profile
   elif [[ $1 = 'set' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
@@ -165,7 +170,7 @@ function sesh {
       return
     fi
     if [[ $(grep $id $PROJECTSESSIONS/current) != '' ]]; then
-      echo "shortcut profile is already in use"
+      echo "profile is already in use"
       return
     fi
     echo $(sesh 'getid' $2) >> $PROJECTSESSIONS/current
@@ -177,7 +182,7 @@ function sesh {
       source $PROJECTSESSIONS/$(echo "$line" | cut -d ':' -f 1)
     done
   
-  #add alias to specified path to a specified shortcut profile 
+  #add an shortcut to a profile 
   elif [[ $1 = 'add' && ! -z $4 ]]; then
     id=$(sesh 'getid' $4)
     err=$?
@@ -193,7 +198,7 @@ function sesh {
     echo "alias ${3}='cd ${path}'" >> $PROJECTSESSIONS/$(sesh 'getid' $4)
     sesh 'ref'
   
-  #delete specified session file from idlist and current (if applicable)
+  #delete a profile from idlist and current (if applicable)
   elif [[ $1 = 'del' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
@@ -201,7 +206,7 @@ function sesh {
       echo $id
       return
     fi
-    echo "deleting session file at ${PROJECTSESSIONS}/${id}"
+    echo "deleting profile at ${PROJECTSESSIONS}/${id}"
     sesh 'unal' $id
     rm $PROJECTSESSIONS/$id
     
@@ -215,7 +220,7 @@ function sesh {
       sed $id_line'd' $PROJECTSESSIONS/current > $PROJECTSESSIONS/tmp_current && mv $PROJECTSESSIONS/tmp_current $PROJECTSESSIONS/current
     fi
 
-  #nickname a session file
+  #nickname a profile
   elif [[ $1 = 'nick' && ! -z $3 ]]; then
     if [[ $(grep "${2}|" $PROJECTSESSIONS/idlist) != '' ]]; then
       echo "nick: error 101 - '$2' is already in use by $(sesh 'getid' $2)"
@@ -231,7 +236,7 @@ function sesh {
   elif [[ $1 = 'modcurr' ]]; then
     vim $PROJECTSESSIONS/current
 
-  #modify specified profile
+  #modify a profile
   elif [[ $1 = 'mod' ]]; then
     id=$(sesh 'getid' $2)
     err=$?
@@ -241,7 +246,7 @@ function sesh {
     fi
     vim $PROJECTSESSIONS/$id
 
-  #create a new session file with nick
+  #create a new profile
   elif [[ $1 = 'new' && ! -z $2 ]]; then
     
     #check if nick is already in use
@@ -262,14 +267,15 @@ function sesh {
       echo "id ${session_id} already exists"
       session_id=$((session_id+1))
       if [[ $session_id -eq 10000 ]]; then
-        echo "maximum number of saved sessions exceeded, cannot create a new session until another is deleted"
+        echo "maximum number of saved sessions exceeded, cannot create a new profile until another is deleted"
         break
       fi
     done
 
-    if [[ $session_id -ne 10000 ]]; then #only create new session file if id does not exceed max
+    #only create new profile if id does not exceed max
+    if [[ $session_id -ne 10000 ]]; then
       touch $PROJECTSESSIONS/$session_id
-      echo -e "created new session file at ${PROJECTSESSIONS}/${session_id}\nSESSION ID: ${session_id}"
+      echo -e "created new profile at ${PROJECTSESSIONS}/${session_id}\PROFILE ID: ${session_id}"
       echo "#SESSION_ID: ${session_id}" >> $PROJECTSESSIONS/$session_id
       echo $session_id':' >> $PROJECTSESSIONS/idlist
     fi
