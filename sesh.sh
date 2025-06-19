@@ -32,32 +32,49 @@ function sesh {
   # START ARGS
 
   #TODO: ADD HELP
-
-  #view the sesh directory
-  if [[ $1 = 'list' ]]; then
+  if [[ $1 = 'dircheck' ]]; then
     if [[ ! -d $PROJECTSESSIONS ]]; then
       echo "directory $PROJECTSESSIONS does not exist"
-      return
+      return 100
+    fi
+    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
+      echo "file $PROJECTSESSIONS/idlist does not exist"
+      return 101
+    fi
+    if [[ ! -f $PROJECTSESSIONS/current ]]; then
+      echo "file $PROJECTSESSIONS/current does not exist"
+      return 102
+    fi
+    echo 'all files present'
+
+
+  #view the sesh directory
+  elif [[ $1 = 'list' ]]; then
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo $msg
+      return $err
     fi
     ls $PROJECTSESSIONS
 
   #go to the shortcut directory
   elif [[ $1 = 'go' ]]; then
-    if [[ ! -d $PROJECTSESSIONS ]]; then
-      echo "directory $PROJECTSESSIONS does not exist"
-      return
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo $msg
+      return $err
     fi
     cd $PROJECTSESSIONS
 
   #get the ids and nicks of the profiles in use
   elif [[ $1 = 'current' ]]; then
-    if [[ ! -f $PROJECTSESSIONS/current ]]; then
-      echo "file $PROJECTSESSIONS/current does not exist"
-      return
-    fi 
-    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
-      echo "file $PROJECTSESSIONS/idlist does not exist"
-      return
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -ge 100 ]]; then
+      echo $msg
+      return $err
     fi
     for line in $(cat $PROJECTSESSIONS/current); do
       echo $(grep $line $PROJECTSESSIONS/idlist)
@@ -65,24 +82,31 @@ function sesh {
   
   #print all profile ids and their nicks
   elif [[ $1 = 'ids' ]]; then
-    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
-      echo "file $PROJECTSESSIONS/idlist does not exist"
-      return
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -ge 100 && $err -ne 102 ]]; then
+      echo $msg
+      return $err
     fi
     cat $PROJECTSESSIONS/idlist
 
   #print the contents of all profiles in use
   elif [[ $1 = 'contents' ]]; then
-    if [[ ! -f $PROJECTSESSIONS/current ]]; then
-      echo "file $PROJECTSESSIONS/current does not exist"
-      return
+    msg=$(sesh 'dircheck')
+    err=$?
+    idlist_exists=1
+    if [[ $err -ge 100 ]]; then
+      echo $msg
+      if [[ $err -eq 101 ]]; then
+        idlist_exists=0
+      else
+        return $err
+      fi
     fi
     echo ' '
     for line in $(cat $PROJECTSESSIONS/current); do
       id=$(echo $line | awk -F':' '{print$1}')
-      if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
-        echo "file $PROJECTSESSIONS/idlist does not exist"
-      else
+      if [[ $idlist_exists = 1 ]]; then
         grep $id $PROJECTSESSIONS/idlist
       fi
       if [[ ! -f $PROJECTSESSIONS/$id ]]; then
@@ -136,19 +160,27 @@ function sesh {
 
   #get the id associated with a nick
   elif [[ $1 = 'getid' && ! -z $2 ]]; then
-    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
-      echo "getid failed: 100 - $PROJECTSESSIONS/idlist does not exist"
-      return 100 #idlist does not exist
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -ge 100 && -$err -ne 102 ]]; then
+      echo $msg
+      return $err
     fi
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
     if [[ $id = '' ]]; then
-      echo "getid failed: 101 - $id nick does not correspond to shortcut profile"
-      return 101
+      echo "getid failed: 100 - nick does not correspond to a shortcut profile"
+      return 100
     fi
     echo $id
 
   #set sesh to have no current session file and unalias all shortcuts
   elif [[ $1 = 'blank' ]]; then
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -ge 100 && $err -ne 101 ]]; then
+      echo $msg
+      return $err
+    fi
     for line in $(cat $PROJECTSESSIONS/current); do
       sesh 'unal' $(echo $line | tr -d '[:space:]')
     done
@@ -215,7 +247,13 @@ function sesh {
     fi
 
   #nickname a session file
-  elif [[ $1 = 'nick' && ! -z $3 ]]; then 
+  elif [[ $1 = 'nick' && ! -z $3 ]]; then
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -ge 100 && $err -ne 102 ]]; then
+      echo $msg
+      return $err
+    fi
     if [[ $(grep "${2}|" $PROJECTSESSIONS/idlist) != '' ]]; then
       echo "nick: error 101 - '$2' is already in use by $(sesh 'getid' $2)"
       return 101
@@ -224,18 +262,22 @@ function sesh {
 
   #modify idlist
   elif [[ $1 = 'modlist' ]]; then
-    if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
-      echo "file $PROJECTSESSIONS/idlist does not exist"
-      return
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -ge 100 && $err -ne 102 ]]; then
+      echo $msg
+      return $err
     fi
     vim $PROJECTSESSIONS/idlist
 
   #modify current
   elif [[ $1 = 'modcurr' ]]; then
-    if [[ ! -f $PROJECTSESSIONS/current ]]; then
-      echo "file $PROJECTSESSIONS/current does not exist"
-      return
-    fi 
+    msg=$(sesh 'dircheck')
+    err=$?
+    if [[ $err -ge 100 && $err -ne 101 ]]; then
+      echo $msg
+      return $err
+    fi
     vim $PROJECTSESSIONS/current
 
   #modify specified profile
@@ -254,7 +296,7 @@ function sesh {
     #check if nick is already in use
     if [[ $(grep "${2}|" $PROJECTSESSIONS/idlist) != '' ]]; then
       echo "new: error 101 - '$2' is already in use by $(sesh 'getid' $2)"
-      return 101
+      return 100
     fi
 
     #create random id between 1000 and 9999
