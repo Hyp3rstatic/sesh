@@ -162,12 +162,6 @@ function sesh {
     done
     rm $PROJECTSESSIONS/current
     touch $PROJECTSESSIONS/current
-    
-  #unset all sesssion profiles except the one specified
-  elif [[ $1 = 'setx' && ! -z $2 ]]; then
-    sesh 'unset'
-    echo "$(sesh 'getid' $2)" >> $PROJECTSESSIONS/current
-    sesh 'ref'
 
   #use a shortcut profile
   elif [[ $1 = 'set' && ! -z $2 ]]; then
@@ -197,6 +191,15 @@ function sesh {
   #add alias to specified path to a specified shortcut profile 
   elif [[ $1 = 'add' && ! -z $4 ]]; then
     id=$(sesh 'getid' $4)
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
+    if [[ $err -eq 101 ]]; then
+      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+      return
+    fi
     if [[ $(grep $3'=' $PROJECTSESSIONS'/'$id) != '' ]]; then
       echo "alias: '$3' is already in use by $4: $id"
       return
@@ -208,6 +211,15 @@ function sesh {
   #delete specified session file from idlist and current (if applicable)
   elif [[ $1 = 'del' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
+    err=$?
+    if [[ $err -eq 100 ]]; then
+      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
+      return
+    fi
+    if [[ $err -eq 101 ]]; then
+      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+      return
+    fi
     echo "deleting session file at ${PROJECTSESSIONS}/${id}"
     sesh 'unal' $id
     rm $PROJECTSESSIONS/$id
