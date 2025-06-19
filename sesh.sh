@@ -97,12 +97,8 @@ function sesh {
   elif [[ $1 = 'view' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
-    if [[ $err -eq 100 ]]; then
-      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
-      return
-    fi
-    if [[ $err -eq 101 ]]; then
-      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+    if [[ $err -ge 100 ]]; then
+      echo $id
       return
     fi
     if [[ ! -f $PROJECTSESSIONS/$id ]]; then
@@ -126,12 +122,8 @@ function sesh {
   elif [[ $1 = 'unset' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
-    if [[ $err -eq 100 ]]; then
-      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
-      return
-    fi
-    if [[ $err -eq 101 ]]; then
-      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+    if [[ $err -ge 100 ]]; then
+      echo $id
       return
     fi
     if [[ $(grep $id $PROJECTSESSIONS/current) = '' ]]; then
@@ -145,12 +137,12 @@ function sesh {
   #get the id associated with a nick
   elif [[ $1 = 'getid' && ! -z $2 ]]; then
     if [[ ! -f $PROJECTSESSIONS/idlist ]]; then
-      echo "file $PROJECTSESSIONS/idlist does not exist"
+      echo "getid failed: 100 - $PROJECTSESSIONS/idlist does not exist"
       return 100 #idlist does not exist
     fi
     id=$(grep $2'|' $PROJECTSESSIONS/idlist | cut -d: -f1)
     if [[ $id = '' ]]; then
-      echo "'${2}' does not correspond to any shortcut profile"
+      echo "getid failed: 101 - $id nick does not correspond to shortcut profile"
       return 101
     fi
     echo $id
@@ -167,12 +159,8 @@ function sesh {
   elif [[ $1 = 'set' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
-    if [[ $err -eq 100 ]]; then
-      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
-      return
-    fi
-    if [[ $err -eq 101 ]]; then
-      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+    if [[ $err -ge 100 ]]; then
+      echo $id
       return
     fi
     if [[ $(grep $id $PROJECTSESSIONS/current) != '' ]]; then
@@ -192,12 +180,8 @@ function sesh {
   elif [[ $1 = 'add' && ! -z $4 ]]; then
     id=$(sesh 'getid' $4)
     err=$?
-    if [[ $err -eq 100 ]]; then
-      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
-      return
-    fi
-    if [[ $err -eq 101 ]]; then
-      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+    if [[ $err -ge 100 ]]; then
+      echo $id
       return
     fi
     if [[ $(grep $3'=' $PROJECTSESSIONS'/'$id) != '' ]]; then
@@ -212,12 +196,8 @@ function sesh {
   elif [[ $1 = 'del' && ! -z $2 ]]; then
     id=$(sesh 'getid' $2)
     err=$?
-    if [[ $err -eq 100 ]]; then
-      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
-      return
-    fi
-    if [[ $err -eq 101 ]]; then
-      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+    if [[ $err -ge 100 ]]; then
+      echo $id
       return
     fi
     echo "deleting session file at ${PROJECTSESSIONS}/${id}"
@@ -262,12 +242,8 @@ function sesh {
   elif [[ $1 = 'mod' ]]; then
     id=$(sesh 'getid' $2)
     err=$?
-    if [[ $err -eq 100 ]]; then
-      echo "getid failed: $err - $PROJECTSESSIONS/idlist does not exist"
-      return
-    fi
-    if [[ $err -eq 101 ]]; then
-      echo "getid failed: $err - $id nick does not correspond to shortcut profile"
+    if [[ $err -ge 100 ]]; then
+      echo $id
       return
     fi
     vim $PROJECTSESSIONS/$id
