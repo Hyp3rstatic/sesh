@@ -1,11 +1,6 @@
-Add Actual Flags
 WIP: Better Error handeling and security checks
-Add more options for commands i.e. 
-  current dir, other dirs, current sesh, other seshs
 Expand sesh past alias to other conveniences
 
-Python Running specific scripts
-
 BUGS:
-  session ID's readded when new is called to the same file
   differences between terminals
+

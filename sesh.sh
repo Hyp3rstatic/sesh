@@ -194,9 +194,15 @@ function sesh {
       source $PROJECTSESSIONS/$(echo "$line" | cut -d ':' -f 1)
     done
   
-  #add a cd alias to to current directory of the user in the specified shortcut profile
-  elif [[ $1 = 'add' && ! -z $3 ]]; then
-    echo "alias ${2}='cd ${PWD}'" >> $PROJECTSESSIONS/$(sesh 'getid' $3)
+  #add alias to specified path to a specified shortcut profile 
+  elif [[ $1 = 'add' && ! -z $4 ]]; then
+    id=$(sesh 'getid' $4)
+    if [[ $(grep $3'=' $PROJECTSESSIONS'/'$id) != '' ]]; then
+      echo "alias: '$3' is already in use by $4: $id"
+      return
+    fi
+    path=$(readlink -f $2)
+    echo "alias ${3}='cd ${path}'" >> $PROJECTSESSIONS/$(sesh 'getid' $4)
     sesh 'ref'
   
   #delete specified session file from idlist and current (if applicable)
@@ -217,7 +223,11 @@ function sesh {
     fi
 
   #nickname a session file
-  elif [[ $1 = 'nick' && ! -z $3 ]]; then
+  elif [[ $1 = 'nick' && ! -z $3 ]]; then 
+    if [[ $(grep "${2}|" $PROJECTSESSIONS/idlist) != '' ]]; then
+      echo "nick: error 101 - '$2' is already in use by $(sesh 'getid' $2)"
+      return 101
+    fi
     sed 's/'$3':/'$3':'$2'|''/' $PROJECTSESSIONS/idlist > $PROJECTSESSIONS/tmp_idlist && mv $PROJECTSESSIONS/tmp_idlist $PROJECTSESSIONS/idlist
 
   #modify idlist
@@ -252,6 +262,12 @@ function sesh {
 
   #create a new session file with nick
   elif [[ $1 = 'new' && ! -z $2 ]]; then
+    
+    #check if nick is already in use
+    if [[ $(grep "${2}|" $PROJECTSESSIONS/idlist) != '' ]]; then
+      echo "new: error 101 - '$2' is already in use by $(sesh 'getid' $2)"
+      return 101
+    fi
 
     #create random id between 1000 and 9999
     session_id=$((RANDOM % 9000 + 1000))
@@ -276,8 +292,9 @@ function sesh {
       echo "#SESSION_ID: ${session_id}" >> $PROJECTSESSIONS/$session_id
       echo $session_id':' >> $PROJECTSESSIONS/idlist
     fi
+    
     sesh 'nick' $2 $session_id
- 
+     
   fi
 }
 
