@@ -43,8 +43,31 @@ function sesh {
 
   # START ARGS
 
+  if [[ $1 = 'help' ]]; then
+    echo "
+      list      - ls sesh directory
+      go        - cd sesh directory
+      current   - display the profiles in use
+      ids       - display all created profiles
+      contents  - display contents of profiles in use
+      view      - display the contents of a specified profile
+      unal      - unalias a profile (by id)
+      unset     - stop using a profile
+      getid     - get the id of a profile nick
+      blank     - unset all profiles
+      set       - use a profile
+      ref       - source all lines of the profiles currently in use
+      add       - add a shortcut to a profile
+      del       - delete a profile
+      nick      - nickname a profile
+      modlist   - modify list
+      modcurr   - modify current
+      mod       - modify a profile
+      new       - create a new profile
+    "
+
   #view the sesh directory
-  if [[ $1 = 'list' ]]; then
+  elif [[ $1 = 'list' ]]; then
     ls $PROJECTSESSIONS
 
   #go to the shortcut directory
